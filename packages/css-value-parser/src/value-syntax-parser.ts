@@ -63,68 +63,73 @@ export function parseValueSyntax(source: string) {
     );
 }
 
-type Range = [min: number, max: number];
+export type Range = [min: number, max: number];
 
-interface Multipliers {
+export interface Multipliers {
     range?: Range;
     list?: boolean;
 }
 
-interface DataTypeNode {
+export interface DataTypeNode {
     type: 'data-type';
     name: string;
     range?: Range;
     multipliers?: Multipliers;
 }
 
-interface PropertyNode {
+export interface PropertyNode {
     type: 'property';
     name: string;
     range?: Range;
     multipliers?: Multipliers;
 }
 
-interface LiteralNode {
+export interface LiteralNode {
     type: 'literal';
     name: string;
     enclosed: boolean;
     multipliers?: Multipliers;
 }
 
-interface KeywordNode {
+export interface KeywordNode {
     type: 'keyword';
     name: string;
     multipliers?: Multipliers;
 }
 
-interface CombinatorGroup {
+export interface CombinatorGroup {
     nodes: ValueSyntaxAstNode[];
 }
 
-interface JuxtaposingNode extends CombinatorGroup {
+export interface JuxtaposingNode extends CombinatorGroup {
     type: 'juxtaposing';
 }
 
-interface DoubleAmpersandNode extends CombinatorGroup {
+export interface DoubleAmpersandNode extends CombinatorGroup {
     type: '&&';
 }
 
-interface DoubleBarNode extends CombinatorGroup {
+export interface DoubleBarNode extends CombinatorGroup {
     type: '||';
 }
 
-interface BarNode extends CombinatorGroup {
+export interface BarNode extends CombinatorGroup {
     type: '|';
 }
 
-interface GroupNode extends CombinatorGroup {
+export interface GroupNode extends CombinatorGroup {
     type: 'group';
     multipliers?: Multipliers;
 }
 
-type Combinators = GroupNode | JuxtaposingNode | DoubleAmpersandNode | DoubleBarNode | BarNode;
+export type Combinators =
+    | GroupNode
+    | JuxtaposingNode
+    | DoubleAmpersandNode
+    | DoubleBarNode
+    | BarNode;
 
-type Components = DataTypeNode | PropertyNode;
+export type Components = DataTypeNode | PropertyNode;
 export type ValueSyntaxAstNode = Components | KeywordNode | LiteralNode | Combinators;
 
 export function literal(name: string, enclosed = false, multipliers?: Multipliers): LiteralNode {

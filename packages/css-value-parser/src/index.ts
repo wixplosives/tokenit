@@ -7,3 +7,5 @@ export { background } from './properties/background';
 export { margin } from './properties/margin';
 // syntax
 export { parseValueSyntax } from './value-syntax-parser';
+// tools
+export { match } from './ast-tools/matcher';
