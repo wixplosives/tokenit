@@ -84,6 +84,11 @@ interface PropertyNode {
     multipliers?: Multipliers;
 }
 
+interface BooleanExpr {
+    type: 'boolean-expr';
+    test: ValueSyntaxAstNode[];
+}
+
 interface LiteralNode {
     type: 'literal';
     name: string;
@@ -125,7 +130,7 @@ interface GroupNode extends CombinatorGroup {
 type Combinators = GroupNode | JuxtaposingNode | DoubleAmpersandNode | DoubleBarNode | BarNode;
 
 type Components = DataTypeNode | PropertyNode;
-export type ValueSyntaxAstNode = Components | KeywordNode | LiteralNode | Combinators;
+export type ValueSyntaxAstNode = Components | KeywordNode | LiteralNode | Combinators | BooleanExpr;
 
 export function literal(name: string, enclosed = false, multipliers?: Multipliers): LiteralNode {
     return { type: 'literal', name, enclosed, multipliers };
@@ -141,6 +146,10 @@ export function property(name: string, range?: Range, multipliers?: Multipliers)
 
 export function dataType(name: string, range?: Range, multipliers?: Multipliers): DataTypeNode {
     return { type: 'data-type', name, range, multipliers };
+}
+
+export function booleanExpr(test: ValueSyntaxAstNode[]): BooleanExpr {
+    return { type: 'boolean-expr', test };
 }
 
 export function group(nodes: ValueSyntaxAstNode[], multipliers?: Multipliers): GroupNode {
@@ -198,6 +207,7 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
 
             const type = getLiteralValueType(name);
             let range: Range | undefined;
+            let booleanTest: ValueSyntaxAstNode[] | undefined;
             if (type === 'invalid') {
                 throw new Error('missing data type name');
             } else {
@@ -205,14 +215,20 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
                 if (t.type === '>') {
                     closed = true;
                 } else if (t.type === '[') {
-                    const min = s.eat('space').take('text');
-                    const sep = s.eat('space').take(',');
-                    const max = s.eat('space').take('text');
-                    const end = s.eat('space').take(']');
-                    if (min && sep && max && end) {
-                        range = [parseNumber(min.value), parseNumber(max.value)];
+                    if (name === 'boolean-expr') {
+                        // https://drafts.csswg.org/css-values-5/#boolean
+                        const _test = s.run(handleToken, { ast: [] }, _source);
+                        booleanTest = _test.ast;
                     } else {
-                        throw new Error('Invalid range');
+                        const min = s.eat('space').take('text');
+                        const sep = s.eat('space').take(',');
+                        const max = s.eat('space').take('text');
+                        const end = s.eat('space').take(']');
+                        if (min && sep && max && end) {
+                            range = [parseNumber(min.value), parseNumber(max.value)];
+                        } else {
+                            throw new Error('Invalid range');
+                        }
                     }
                     const t = s.eat('space').take('>');
                     if (t) {
@@ -223,7 +239,12 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
             if (!closed) {
                 throw new Error('missing ">"');
             }
-            if (type === 'quoted') {
+            if (name === 'boolean-expr') {
+                if (!booleanTest) {
+                    throw new Error('missing boolean expression');
+                }
+                ast.push(booleanExpr(booleanTest));
+            } else if (type === 'quoted') {
                 ast.push(property(name.slice(1, -1), range));
             } else {
                 ast.push(dataType(name, range));
@@ -275,7 +296,12 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
             s.eat('space');
         } else if (isRangeMultiplier(token)) {
             const node = lastParsedNode(ast);
-            if (!node || node.type === 'juxtaposing' || isLowLevelGroup(node)) {
+            if (
+                !node ||
+                node.type === 'juxtaposing' ||
+                node.type === 'boolean-expr' ||
+                isLowLevelGroup(node)
+            ) {
                 throw new Error('unexpected modifier');
             }
             node.multipliers ??= {};
@@ -289,7 +315,12 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
             } else {
                 const node = lastParsedNode(ast);
 
-                if (!node || isLowLevelGroup(node) || node.type === 'juxtaposing') {
+                if (
+                    !node ||
+                    isLowLevelGroup(node) ||
+                    node.type === 'juxtaposing' ||
+                    node.type === 'boolean-expr'
+                ) {
                     throw new Error('unexpected range modifier');
                 }
 
@@ -327,7 +358,12 @@ function parseTokens(tokens: ValueSyntaxToken[], source: string) {
             }
         } else if (token.type === '#') {
             const node = lastParsedNode(ast);
-            if (!node || node.type === 'juxtaposing' || isLowLevelGroup(node)) {
+            if (
+                !node ||
+                node.type === 'juxtaposing' ||
+                isLowLevelGroup(node) ||
+                node.type === 'boolean-expr'
+            ) {
                 throw new Error('unexpected list modifier');
             }
             node.multipliers ??= {};

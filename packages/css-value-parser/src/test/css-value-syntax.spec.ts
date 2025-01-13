@@ -3,6 +3,7 @@ import { expect } from 'chai';
 //TODO: fixme
 import {
     bar,
+    booleanExpr,
     dataType,
     doubleAmpersand,
     doubleBar,
@@ -247,6 +248,17 @@ describe('value-syntax-parser', () => {
                     ]),
                 ]),
             );
+        });
+    });
+
+    describe('boolean-expr', () => {
+        // https://drafts.csswg.org/css-values-5/#boolean
+        it('should parse with inner test nodes', () => {
+            const x = parseValueSyntax(`<boolean-expr[<if-test>]>`);
+            expect(x).to.eql(booleanExpr([dataType('if-test')]));
+        });
+        it('should fail for missing nodes', () => {
+            expect(() => parseValueSyntax(`<boolean-expr>`)).to.throw('missing boolean expression');
         });
     });
 });
